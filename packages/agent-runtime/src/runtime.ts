@@ -3,6 +3,7 @@ import { restoreHostedSearchReplay } from "./hosted-search-replay.js";
 import { requestExtensionUi } from "./extensions/ui-request.js";
 import { readLocalRequestErrorDetails } from "./local-request-errors.js";
 import { imageGenerationDescription, imageGenerationParameters } from "./image-generation/tool.js";
+import { memoryToolDescriptions, memoryToolParameters } from "./memory-tools.js";
 import { scheduledToolParameters, scheduledToolDescriptions } from "./scheduled-tools.js";
 import { withPiFileOpToolNames } from "./pi-file-ops.js";
 import { randomUUID } from "node:crypto";
@@ -2886,7 +2887,7 @@ Do not invent objections or turn speculative risks into blockers. Stop when the 
     const externalPathHint =
       " An explicit path outside the workspace and session scratch roots requires permission unless the effective mode is Auto.";
     const describe = (toolName: string): string => {
-      if (toolName === "GenerateImages") return imageGenerationDescription;
+      if (memoryToolDescriptions[toolName]) return memoryToolDescriptions[toolName];
       if (scheduledToolDescriptions[toolName]) return scheduledToolDescriptions[toolName];
       switch (toolName) {
         case "BrowserPreview":
@@ -3031,6 +3032,7 @@ Do not invent objections or turn speculative risks into blockers. Stop when the 
       },
       PluginCheck: { directory: Type.String() },
       PluginPack: { directory: Type.String() },
+      ...memoryToolParameters,
     };
     const exec = (toolName: string): AgentTool => {
       const run: AgentTool["execute"] = async (
@@ -3407,7 +3409,13 @@ Do not invent objections or turn speculative risks into blockers. Stop when the 
           ]
         : ["Read", "Glob", "Grep", "BrowserPreview", "Bash", "Write", "Edit"];
     if (this.mode === "agent") {
-      tools.push("PluginScaffold", "PluginPack", "GenerateImages", ...Object.keys(scheduledToolParameters));
+      tools.push(
+        "PluginScaffold",
+        "PluginPack",
+        "GenerateImages",
+        ...Object.keys(scheduledToolParameters),
+        ...Object.keys(memoryToolParameters),
+      );
     }
     const builtins = tools.map(exec);
 

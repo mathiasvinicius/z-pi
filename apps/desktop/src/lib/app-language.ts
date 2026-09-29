@@ -1,5 +1,6 @@
 import i18n from "i18next";
 import {
+  defaultLocale,
   isAppLocale,
   resolveLocale,
   type AppLocale,
@@ -25,11 +26,12 @@ export function resolveOsLocale(): string {
   );
 }
 
-/** Concrete locale for a stored language setting; `auto`/absent follows the OS. */
+/** Concrete locale: new profiles use pt-BR, explicit `auto` follows the OS. */
 export function resolveAppLanguage(
   language: AppSettings["language"],
 ): AppLocale {
-  if (language && language !== "auto" && isAppLocale(language)) return language;
+  if (!language) return defaultLocale;
+  if (language !== "auto" && isAppLocale(language)) return language;
   return resolveLocale(resolveOsLocale());
 }
 

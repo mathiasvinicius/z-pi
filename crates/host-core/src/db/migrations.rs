@@ -878,3 +878,25 @@ pub(crate) fn migrate_v19_to_v20(conn: &Connection, path: &Path) -> Result<()> {
     })?;
     Ok(())
 }
+
+/// v21 adds relational memory storage (Z-PI P2.1, ADR
+/// z-pi-local-relational-memory). Purely additive: tables, indexes, and the
+/// FTS5 index are created; no existing row is read or rewritten.
+pub(crate) fn migrate_v20_to_v21_tx(tx: &rusqlite::Transaction<'_>) -> Result<()> {
+    tx.execute_batch(super::memory_schema::MEMORY_SCHEMA)?;
+    tx.pragma_update(None, "user_version", 21i64)?;
+    Ok(())
+}
+
+pub(crate) fn migrate_v20_to_v21(conn: &Connection, path: &Path) -> Result<()> {
+    let backup = create_migration_backup(conn, path, 20)?;
+    let tx = conn.unchecked_transaction()?;
+    migrate_v20_to_v21_tx(&tx)?;
+    tx.commit().with_context(|| {
+        format!(
+            "commit schema v20 to v21 migration; backup {} remains",
+            backup.display()
+        )
+    })?;
+    Ok(())
+}

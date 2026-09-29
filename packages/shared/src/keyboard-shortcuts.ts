@@ -29,6 +29,7 @@ export type KeyboardShortcutDefinition = {
   group: KeyboardShortcutGroup;
   defaultBinding: string;
   macDefaultBinding?: string;
+  winDefaultBinding?: string | null;
 };
 
 export const KEYBOARD_SHORTCUTS: readonly KeyboardShortcutDefinition[] = [
@@ -51,6 +52,7 @@ export const KEYBOARD_SHORTCUTS: readonly KeyboardShortcutDefinition[] = [
     id: "openPluginLauncher",
     group: "navigation",
     defaultBinding: "Alt+Space",
+    winDefaultBinding: null,
   },
   { id: "toggleSidebar", group: "navigation", defaultBinding: "Mod+B" },
   { id: "openWorkPanel", group: "navigation", defaultBinding: "Mod+J" },
@@ -243,7 +245,10 @@ export type KeyboardEventLike = {
 export function defaultKeybinding(
   shortcut: KeyboardShortcutDefinition,
   platform: ShortcutPlatform,
-): string {
+): string | null {
+  if (platform === "win32" && shortcut.winDefaultBinding !== undefined) {
+    return shortcut.winDefaultBinding;
+  }
   return platform === "darwin" && shortcut.macDefaultBinding
     ? shortcut.macDefaultBinding
     : shortcut.defaultBinding;

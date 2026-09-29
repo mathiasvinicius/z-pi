@@ -21,7 +21,10 @@ export type ProjectInstructions = {
 };
 
 export function globalInstructionPath(): string {
-  return GLOBAL_INSTRUCTION_PATH;
+  const dataDir = process.env.Z_PI_PROFILE_ROOT?.trim();
+  return dataDir
+    ? join(resolve(dataDir), "agent", "AGENTS.md")
+    : GLOBAL_INSTRUCTION_PATH;
 }
 
 function isWithinRoot(root: string, path: string): boolean {
@@ -113,7 +116,7 @@ export async function loadProjectInstructions(
 export async function loadInstructionChain(
   workspaceRoot: string | null | undefined,
   workspacePath?: string,
-  globalPath = GLOBAL_INSTRUCTION_PATH,
+  globalPath = globalInstructionPath(),
 ): Promise<ProjectInstructions | undefined> {
   const entries: ProjectInstruction[] = [];
   let remaining = MAX_INSTRUCTION_BYTES;

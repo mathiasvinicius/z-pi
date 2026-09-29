@@ -20,6 +20,8 @@ Each ADR includes:
 
 | ID | Title | Status |
 |---|---|---|
+| z-pi-local-relational-memory | [Local relational memory in host-core (Z-PI P2.1)](z-pi-local-relational-memory.md) | Accepted for implementation |
+| z-pi-windows-profile-and-release | [Isolate Z-PI portable profiles and release identity](z-pi-windows-profile-and-release.md) | Accepted for incremental implementation |
 | plan-tool-declarations-and-execution-denials | [Keep known tool declarations while denying contract-mode execution](plan-tool-declarations-and-execution-denials.md) | Accepted for implementation |
 | trusted-extension-operation-ownership | [Trusted extension operation ownership](trusted-extension-operation-ownership.md) | Implemented candidate |
 | scheduled-desktop-automations | [Desktop automation scheduling](scheduled-desktop-automations.md) | Accepted for implementation |

@@ -1348,6 +1348,7 @@ sklm: {
     presetMinimaxIntl: "MiniMax（國際）",
     presetMoonshotIntl: "Moonshot AI（國際）",
     presetVercelGateway: "Vercel AI Gateway",
+    presetZrouter: "ZRouter",
     presetAlibabaTokenPlan: "通義 Token 套餐",
     presetAlibabaTokenPlanCn: "通義 Token 套餐（中國）",
     presetXiaomiTokenPlanCn: "小米 Token 套餐（中國）",

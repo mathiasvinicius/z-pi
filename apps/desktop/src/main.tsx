@@ -2,11 +2,11 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
-import { catalogs, flattenCatalog, resolveLocale } from "@pi-desktop/i18n";
+import { catalogs, defaultLocale, flattenCatalog, resolveLocale } from "@pi-desktop/i18n";
 import { MAC_TRAFFIC_LIGHT_EDGE_DIP } from "@pi-desktop/shared";
 import App from "./App";
 import { PluginLauncher } from "./components/PluginLauncher";
-import { initLanguageSync, resolveOsLocale } from "./lib/app-language";
+import { initLanguageSync } from "./lib/app-language";
 import { installScrollbarReveal } from "./lib/scrollbar-reveal";
 import "./styles/globals.css";
 
@@ -31,7 +31,7 @@ if (document.documentElement.dataset.platform === "darwin") {
 // element so the thumb shows while it moves, not only under the pointer.
 installScrollbarReveal(document);
 
-const locale = resolveLocale(resolveOsLocale());
+const locale = defaultLocale;
 const resources = Object.fromEntries(
   Object.entries(catalogs).map(([lng, catalog]) => [
     lng,

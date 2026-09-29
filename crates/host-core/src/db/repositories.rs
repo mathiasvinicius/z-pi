@@ -1,6 +1,9 @@
 use super::*;
 
 pub(crate) const OBSOLETE_PLAN_APPROVAL_PERMISSION_MODE: &str = "planApprovalPermissionMode";
+pub(crate) const ZROUTER_FIRST_RUN_SETTING: &str = "zrouterFirstRun";
+pub(crate) const ZROUTER_FIRST_RUN_PENDING: &str = "pending";
+pub(crate) const ZROUTER_FIRST_RUN_COMPLETED: &str = "completed";
 
 pub(crate) fn strip_obsolete_plan_approval_permission_mode(value: &mut Value) -> bool {
     value
@@ -96,6 +99,10 @@ impl Database {
     /// (D119 breaking reset — content moved to transcript files, no data
     /// migration); files with an unknown newer schema fail.
     pub fn open(path: &Path) -> Result<Self> {
+        Self::open_with_fresh_profile_seed(path, true)
+    }
+
+    fn open_with_fresh_profile_seed(path: &Path, seed_fresh_profile: bool) -> Result<Self> {
         if let Some(parent) = path.parent().filter(|p| !p.as_os_str().is_empty()) {
             std::fs::create_dir_all(parent)?;
         }
@@ -135,6 +142,18 @@ impl Database {
                 tx.execute_batch(SCHEMA_LATEST)?;
                 tx.execute_batch(PLAN_APPROVALS_SCHEMA)?;
                 tx.execute_batch(crate::session_collaboration::SCHEMA)?;
+                tx.execute_batch(MEMORY_SCHEMA)?;
+                if seed_fresh_profile {
+                    tx.execute(
+                        "INSERT INTO kv (ns, key, value_json, updated_at) VALUES (?1, ?2, ?3, ?4)",
+                        params![
+                            "app",
+                            ZROUTER_FIRST_RUN_SETTING,
+                            Value::String(ZROUTER_FIRST_RUN_PENDING.into()).to_string(),
+                            now_ms(),
+                        ],
+                    )?;
+                }
                 tx.pragma_update(None, "user_version", SCHEMA_VERSION)?;
                 tx.commit()?;
             }
@@ -183,11 +202,16 @@ impl Database {
             19 => {
                 migrate_v19_to_v20(&conn, path)?;
             }
+            20 => {
+                migrate_v20_to_v21(&conn, path)?;
+            }
             legacy @ 1..=6 => {
                 let _ = conn.execute_batch("PRAGMA wal_checkpoint(TRUNCATE);");
                 drop(conn);
                 archive_legacy_db(path, legacy)?;
-                return Self::open(path);
+                // An archived legacy profile must never become a first-run
+                // profile merely because its replacement database is empty.
+                return Self::open_with_fresh_profile_seed(path, false);
             }
             SCHEMA_VERSION => {}
             other => {
@@ -217,6 +241,10 @@ impl Database {
         }
         if migrated_version == 19 {
             migrate_v19_to_v20(&conn, path)?;
+            migrated_version = conn.query_row("PRAGMA user_version", [], |r| r.get(0))?;
+        }
+        if migrated_version == 20 {
+            migrate_v20_to_v21(&conn, path)?;
         }
         let db = Self { conn, data_dir };
         db.boot_maintenance()?;

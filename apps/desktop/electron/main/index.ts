@@ -47,7 +47,7 @@ import {
 } from "./work-panel-window";
 import { InflightCheckpointer } from "@pi-desktop/host-runtime";
 import { withGitBranch } from "./workspace-git";
-import { applyDevelopmentUserData, desktopDataDir } from "./data-paths";
+import { applyDevelopmentUserData, applyPortableUserData, desktopDataDir } from "./data-paths";
 import { createPlanUiProbe } from "./plan-ui-probe";
 import { registerIpcHandlers } from "./ipc/register";
 import { createVoiceService } from "./voice-service";
@@ -93,6 +93,14 @@ const isDevelopmentBuild =
 
 app.setName(APP_NAME);
 applyDevelopmentUserData(app, isDevelopmentBuild);
+if (process.platform === "win32") {
+  applyPortableUserData(
+    app,
+    isDevelopmentBuild,
+    process.env.PORTABLE_EXECUTABLE_FILE,
+    process.env.PI_DESKTOP_DATA_DIR,
+  );
+}
 if (process.platform === "win32") {
   app.setAppUserModelId(APP_ID);
 }
@@ -210,6 +218,10 @@ const dataDir = desktopDataDir(isDevelopmentBuild);
 // it as a parameter, and a profile split across two directories is the
 // divergence D236 closes.
 process.env.PI_DESKTOP_DATA_DIR = dataDir;
+if (!isDevelopmentBuild && process.platform === "win32" && process.env.PORTABLE_EXECUTABLE_FILE) {
+  process.env.PI_DESKTOP_AGENTS_DIR = dataDir;
+  process.env.Z_PI_PROFILE_ROOT = dataDir;
+}
 
 // Agent extensions (D387/D388, ADR 0214): plugins contribute the modules,
 // the sidecar loads them; this bridge carries commands, diagnostics, and

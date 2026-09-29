@@ -1,5 +1,7 @@
 import { homedir } from "node:os";
-import { join, resolve } from "node:path";
+import { dirname, isAbsolute, join, resolve } from "node:path";
+import { mkdirSync } from "node:fs";
+import { execFileSync } from "node:child_process";
 import { APP_NAME } from "@pi-desktop/shared";
 
 /**
@@ -16,10 +18,10 @@ import { APP_NAME } from "@pi-desktop/shared";
  * same single-writer database, which is the divergence D236 exists to
  * prevent. Neither is workable while someone debugs against the app they use.
  *
- * Only the development side moves, and only these two names differ. A shipped
- * installation keeps `PI-Desktop` and `~/.pi-desktop`, so no upgrade relocates
- * a user's database, secrets, plugins, or renderer-local state, and
- * `PI_DESKTOP_DATA_DIR` still overrides either profile outright.
+ * Z-PI's Windows portable build adds a third case: the original executable
+ * location owns both Chromium state and `.pi-desktop`. Existing non-portable
+ * installs keep their original default path. `PI_DESKTOP_DATA_DIR` remains an
+ * explicit override for development and isolated tests.
  */
 
 /** `userData` directory of a development installation, beside the shipped one. */
@@ -38,27 +40,33 @@ export type DataDirInput = {
   development: boolean;
   /** The user's home directory. */
   home: string;
+  /** Original Windows portable executable, before electron-builder extracts it. */
+  portableExecutable?: string;
 };
 
 /**
- * The data directory one installation owns.
+ * The data directory one installation owns. Portable Windows executables use
+ * `PORTABLE_EXECUTABLE_FILE`, not Electron's temporary extraction directory.
  *
  * `PI_DESKTOP_DATA_DIR` stays the escape hatch it always was: an explicit
- * directory wins, which is how the E2E harnesses, the capture rig, and
- * side-by-side profiles keep choosing their own root. The result is absolute,
+ * directory wins, which is how the E2E harnesses and capture rig keep choosing
+ * their own root. The result is absolute,
  * because it reaches host-core as a child-process environment variable from a
  * working directory that need not be this one, and because `homedir()` is the
- * only other input that could be relative. Without an override the profile
- * picks the name, and that name is the whole difference between the two
- * installations.
+ * only other input that could be relative. Portable builds use the absolute
+ * original executable path; other builds retain their former home-based root.
  */
 export function resolveDataDir({
   override,
   development,
   home,
+  portableExecutable,
 }: DataDirInput): string {
   const explicit = override?.trim();
   if (explicit) return resolve(explicit);
+  if (!development && portableExecutable?.trim() && isAbsolute(portableExecutable.trim())) {
+    return join(dirname(resolve(portableExecutable.trim())), INSTALLATION_DATA_DIR_NAME);
+  }
   return resolve(
     join(
       home,
@@ -85,6 +93,9 @@ export function desktopDataDir(
     override: process.env.PI_DESKTOP_DATA_DIR,
     development,
     home: homedir(),
+    portableExecutable: process.platform === "win32"
+      ? process.env.PORTABLE_EXECUTABLE_FILE
+      : undefined,
   });
 }
 
@@ -94,6 +105,48 @@ export type UserDataApp = {
   getPath(name: "appData"): string;
   setPath(name: "userData", path: string): void;
 };
+
+/** Mark only the profile directory hidden on Windows; no files are moved. */
+export function hidePortableProfile(
+  profileRoot: string,
+  platform: NodeJS.Platform = process.platform,
+  run: typeof execFileSync = execFileSync,
+): void {
+  if (platform !== "win32") return;
+  run("attrib.exe", ["+h", profileRoot], {
+    windowsHide: true,
+    timeout: 5_000,
+    stdio: "ignore",
+  });
+}
+
+/** Keep Chromium state and its single-instance lock with the portable profile. */
+export function applyPortableUserData(
+  app: UserDataApp,
+  development: boolean,
+  portableExecutable: string | undefined,
+  override: string | undefined,
+): void {
+  if (
+    development ||
+    !portableExecutable?.trim() ||
+    !isAbsolute(portableExecutable.trim()) ||
+    override?.trim() ||
+    app.commandLine.hasSwitch("user-data-dir")
+  ) return;
+  const profileRoot = resolveDataDir({
+    override: undefined,
+    development: false,
+    home: homedir(),
+    portableExecutable,
+  });
+  const userData = join(profileRoot, "electron");
+  mkdirSync(userData, { recursive: true });
+  // Windows does not treat a leading dot as hidden. This is cosmetic, not an
+  // access control boundary; the profile remains in the same location.
+  hidePortableProfile(profileRoot);
+  app.setPath("userData", userData);
+}
 
 /**
  * Give a development build its own `userData` so the single-instance lock

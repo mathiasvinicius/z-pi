@@ -314,6 +314,14 @@ export const NAMED_ENDPOINT_PRESETS: readonly NamedEndpointPreset[] = [
     aliases: ["vercel-ai-gateway"],
   },
   {
+    id: "zrouter",
+    vendorKey: "zrouter",
+    name: "ZRouter",
+    baseUrl: "https://zrouter.itms.com.br/v1",
+    apiStyle: "chat_completions",
+    labelKey: "settings.presetZrouter",
+  },
+  {
     id: "alibaba-token-plan",
     vendorKey: "alibaba-token-plan",
     name: "Qwen Token Plan",

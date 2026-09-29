@@ -4,7 +4,7 @@
   "desktopName": "pi-desktop.desktop",
   "private": true,
   "description": "PI-Desktop Electron application",
-  "homepage": "https://github.com/vastsa/PI-Desktop",
+  "homepage": "https://github.com/mathiasvinicius/z-pi",
   "author": {
     "name": "vastsa",
     "email": "hhxk666@gmail.com"
@@ -79,16 +79,16 @@
     "zustand": "^5.0.15"
   },
   "build": {
-    "appId": "net.aiuo.pi-desktop",
-    "productName": "PI-Desktop",
+    "appId": "br.com.itms.z-pi",
+    "productName": "Z-PI",
     "directories": {
       "output": "release"
     },
     "publish": [
       {
         "provider": "github",
-        "owner": "vastsa",
-        "repo": "PI-Desktop"
+        "owner": "mathiasvinicius",
+        "repo": "z-pi"
       }
     ],
     "extraMetadata": {
@@ -199,8 +199,8 @@
       ]
     },
     "win": {
-      "executableName": "PI-Desktop",
-      "artifactName": "PI-Desktop-Portable-${version}.${ext}",
+      "executableName": "Z-PI",
+      "artifactName": "Z-PI-Portable-${version}.${ext}",
       "target": [
         {
           "target": "nsis",
@@ -236,11 +236,11 @@
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
-      "shortcutName": "PI-Desktop",
-      "artifactName": "PI-Desktop-Setup-${version}.${ext}"
+      "shortcutName": "Z-PI",
+      "artifactName": "Z-PI-Setup-${version}.${ext}"
     },
     "portable": {
-      "artifactName": "PI-Desktop-Portable-${version}.${ext}"
+      "artifactName": "Z-PI-Portable-${version}.${ext}"
     },
     "deb": {
       "packageName": "pi-desktop",

@@ -83,6 +83,8 @@ export type UpdateState = {
 
 export type OnboardingState = {
   showChecklist: boolean;
+  /** Present only for a genuinely new profile that still needs ZRouter setup. */
+  showZRouterSetup?: boolean;
   steps: Array<{
     id: string;
     title: string;

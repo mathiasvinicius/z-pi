@@ -445,6 +445,16 @@ export const useAppStore = create<AppState>((set, get) => {
             isRunning: false,
           };
         });
+        // The host only marks genuinely fresh databases. Wait until startup
+        // has fully returned to the chat draft before entering provider setup.
+        if (
+          onboarding?.showZRouterSetup &&
+          providers.providers.length === 0 &&
+          !get().zRouterSetupPromptHandled
+        ) {
+          set({ zRouterSetupIntent: true });
+          get().setSettingsTab("agent");
+        }
       }
     } catch (e) {
       // A superseded attempt reports nothing: its failure belongs to a wait the

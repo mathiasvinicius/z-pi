@@ -219,6 +219,7 @@ describe("pi-ai built-in API-key services", () => {
       ["nvidia", "https://integrate.api.nvidia.com/v1", "chat_completions"],
       ["opencode", "https://opencode.ai/zen/v1", "chat_completions"],
       ["vercel", "https://ai-gateway.vercel.sh/v1", "chat_completions"],
+      ["zrouter", "https://zrouter.itms.com.br/v1", "chat_completions"],
     ] as const;
     for (const [id, baseUrl, apiStyle] of expected) {
       expect(matchNamedPreset({ vendorKey: id })).toMatchObject({

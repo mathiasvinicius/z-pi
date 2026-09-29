@@ -75,6 +75,8 @@ export function createInitialState(): AppStateData {
     page: "chat",
     settingsTab: "general",
     settingsAnchor: null,
+    zRouterSetupIntent: false,
+    zRouterSetupPromptHandled: false,
     settingsTabNonce: 0,
     navStack: [{ page: "chat" }],
     navIndex: 0,

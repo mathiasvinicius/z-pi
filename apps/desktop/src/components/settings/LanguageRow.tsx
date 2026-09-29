@@ -10,6 +10,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { AppSettings } from "@pi-desktop/shared";
 import {
+  defaultLocale,
   listedLocales,
   localeInfo,
   type AppLanguageSetting,
@@ -38,13 +39,13 @@ export function LanguageRow({
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [activeId, setActiveId] = useState<AppLanguageSetting>(
-    settings.language ?? "auto",
+    settings.language ?? defaultLocale,
   );
   const optionRefs = useRef(new Map<string, HTMLButtonElement>());
 
   const detected = resolveAppLanguage("auto");
   const detectedInfo = localeInfo(detected);
-  const selectedId: AppLanguageSetting = settings.language ?? "auto";
+  const selectedId: AppLanguageSetting = settings.language ?? defaultLocale;
   const autoLabel = t("settings.languageAuto");
 
   const options = useMemo<LanguageOption[]>(() => {

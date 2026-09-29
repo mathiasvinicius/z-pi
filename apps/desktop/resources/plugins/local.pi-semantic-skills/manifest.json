@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "id": "local.pi-semantic-skills",
+  "name": "Skills Semânticas por Perfil",
+  "version": "0.6.0",
+  "description": "Encontra skills do perfil por intenção e evolui procedimentos sem duplicá-los.",
+  "author": "Vinicius Mathias",
+  "main": "main.js",
+  "contributes": {
+    "agentTools": [
+      {
+        "name": "semantic_skills_find",
+        "description": "Encontra skills deste perfil por intenção e devolve metadados; instruções são lidas sob demanda.",
+        "risk": "low",
+        "schema": {
+          "type": "object",
+          "properties": { "query": { "type": "string" }, "limit": { "type": "integer" } },
+          "required": ["query"]
+        }
+      },
+      {
+        "name": "semantic_skills_read",
+        "description": "Lê somente a skill escolhida pelo ID neste perfil.",
+        "risk": "low",
+        "schema": {
+          "type": "object",
+          "properties": { "id": { "type": "string" } },
+          "required": ["id"]
+        }
+      },
+      {
+        "name": "semantic_skills_learn",
+        "description": "Depois de uma tarefa bem-sucedida, cria ou melhora uma skill deste perfil sem duplicatas.",
+        "risk": "medium",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "name": { "type": "string" },
+            "description": { "type": "string" },
+            "procedure": { "type": "string" },
+            "evidence": { "type": "string" },
+            "related": { "type": "array", "items": { "type": "string" } }
+          },
+          "required": ["name", "description", "procedure", "evidence"]
+        }
+      }
+    ],
+    "skills": ["skills/semantic-router.md"]
+  },
+  "permissions": ["agent.tool.register", "agent.prompt.inject", "models.list", "agent.complete"],
+  "engines": { "piDesktop": ">=0.15.6" },
+  "activationEvents": ["onStartup"]
+}

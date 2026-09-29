@@ -8,6 +8,48 @@
 
 ## 1. Goals
 
+### E2E-ZPI-fresh-profile-ZRouter-setup
+
+- **Preconditions:** A new writable Windows portable folder with no existing
+  Z-PI database, plus separate fixture profiles representing an older empty
+  database and an already configured provider. Use a local mock of the ZRouter
+  model endpoint; never place a real API key in fixtures or logs.
+- **Steps:** Start the new copy and inspect the first-run provider form. Enter
+  a fixture key, fetch its allowed model list, select and save a model, then
+  restart. Repeat with invalid/offline fixture responses, dismiss the initial
+  prompt, and delete a provider after it was saved. Open the older and already
+  configured profiles without importing anything.
+- **Expected:** Only a genuinely new profile opens the ZRouter form by default;
+  its URL is `https://zrouter.itms.com.br/v1`, and its API key remains in the
+  existing encrypted provider store. A save uses only models returned for
+  that key, while failed discovery gives a recoverable error. Restarts,
+  dismissal, later provider deletion, and older profiles do not silently
+  recreate a provider or copy credentials. No raw key enters model context,
+  logs, skills, or the repository.
+- **Specs:** [Z-PI Windows foundation](../09-z-pi/01-windows-foundation.md).
+- **Acceptance:** Host fresh-marker and renderer one-shot tests run with
+  fixtures; the full packaged interaction remains unverified until an isolated
+  Electron run exercises the flow.
+
+### E2E-ZPI-semantic-skill-catalog-visibility
+
+- **Preconditions:** Two isolated portable profiles. Put flat, packaged,
+  symlinked, and oversized global skills in one profile, a project skill in
+  its active project, and a different global skill in the other profile.
+  Enable the bundled semantic router only for the selected project.
+- **Steps:** Launch a session, inspect the model-facing skill catalog,
+  composer skill suggestions, and the `Skill` tool's available-ID hint; then
+  disable the router and repeat. Switch project/profile and repeat.
+- **Expected:** With an active router, only global skills it can actually
+  discover are omitted from the duplicate native catalog; the router,
+  built-ins, project skills, unrelated global roots, and unsupported native
+  files remain accessible. With the router inactive, native catalog behavior
+  is unchanged. Reading selected instructions remains on demand and never
+  crosses project/profile boundaries.
+- **Specs:** [Z-PI Windows foundation](../09-z-pi/01-windows-foundation.md).
+- **Acceptance:** Pure visibility tests cover the same predicates; packaged
+  model-context and cross-profile assertions remain to be automated.
+
 ### E2E-LIVE-VOICE-provider-call-lifecycle
 
 - **Preconditions:** Isolated desktop profile with Live Voice enabled and one

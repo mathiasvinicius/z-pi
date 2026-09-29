@@ -1,7 +1,7 @@
 mod config_sync_rpc;
+mod memory_tools;
 mod scheduled_rpc;
 mod scheduled_tools;
-
 use std::io::{self, BufRead, BufReader as StdBufReader, Read, Write};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -743,6 +743,17 @@ fn merge_settings_value(stored: Option<Value>, incoming: Value) -> Value {
     };
     merged.extend(incoming);
     Value::Object(merged)
+}
+
+fn complete_zrouter_first_run(db: &crate::db::Database) -> Result<()> {
+    let marker = db.get_setting(crate::db::ZROUTER_FIRST_RUN_SETTING)?;
+    if marker.as_ref().and_then(Value::as_str) == Some(crate::db::ZROUTER_FIRST_RUN_PENDING) {
+        db.set_setting(
+            crate::db::ZROUTER_FIRST_RUN_SETTING,
+            &Value::String(crate::db::ZROUTER_FIRST_RUN_COMPLETED.into()),
+        )?;
+    }
+    Ok(())
 }
 
 /// Drop image-generation bindings whose provider row is gone.
@@ -2189,6 +2200,8 @@ async fn handle_request(
             let st = state.lock().await;
             let provider =
                 providers::create_provider(&st.db, &st.secrets, input).map_err(provider_rpc_err)?;
+            complete_zrouter_first_run(&st.db)
+                .map_err(|e| rpc_err(1000, e.to_string(), "INTERNAL"))?;
             Ok(json!({ "provider": provider }))
         }
         "providers.update" => {
@@ -3404,6 +3417,7 @@ async fn handle_request(
             let mut definitions = tools::builtin_tool_defs();
             if let Some(items) = definitions.as_array_mut() {
                 items.extend(scheduled_tools::definitions());
+                items.extend(memory_tools::definitions());
             }
             Ok(json!({ "tools": definitions }))
         }
@@ -3901,6 +3915,9 @@ async fn handle_request(
                 } else if scheduled_tools::recognizes(&p.tool_name) {
                     let st = state.lock().await;
                     scheduled_tools::execute(&st, &p)
+                } else if memory_tools::recognizes(&p.tool_name) {
+                    let st = state.lock().await;
+                    memory_tools::execute(&st, &p)
                 } else {
                     tools::execute_tool_with_path_access(
                         ws_path.as_deref(),
@@ -4782,6 +4799,10 @@ async fn handle_request(
                 .get("onboardingDismissed")
                 .and_then(|v| v.as_bool())
                 .unwrap_or(false);
+            let zrouter_first_run = st
+                .db
+                .get_setting(crate::db::ZROUTER_FIRST_RUN_SETTING)
+                .map_err(|e| rpc_err(1000, e.to_string(), "INTERNAL"))?;
             let providers = providers::list_providers(&st.db, &st.secrets, true)
                 .map_err(|e| rpc_err(1000, e.to_string(), "INTERNAL"))?;
             let has_provider = !providers.is_empty();
@@ -4798,10 +4819,20 @@ async fn handle_request(
                 json!({"id":"plugin","title":"Load a development plugin (optional)","done": !st.plugins.list().is_empty(), "action":"plugins.open"}),
             ];
             let critical_incomplete = !has_provider || !has_secret || !has_session;
-            Ok(json!({
+            let mut onboarding = json!({
                 "showChecklist": critical_incomplete && !dismissed,
                 "steps": steps
-            }))
+            });
+            if zrouter_first_run.as_ref().and_then(Value::as_str)
+                == Some(crate::db::ZROUTER_FIRST_RUN_PENDING)
+                && !has_provider
+                && !dismissed
+            {
+                if let Some(object) = onboarding.as_object_mut() {
+                    object.insert("showZRouterSetup".into(), Value::Bool(true));
+                }
+            }
+            Ok(onboarding)
         }
 
         "audit.append" => {
@@ -6643,6 +6674,88 @@ mod tests {
         .await
         .unwrap();
         created["provider"]["id"].as_str().unwrap().to_string()
+    }
+
+    #[tokio::test]
+    async fn zrouter_setup_is_only_offered_to_a_new_profile_until_provider_creation() {
+        let data_dir = tempfile::tempdir().unwrap();
+        let mut app_state = AppState::open(data_dir.path()).unwrap();
+        app_state.handshook = true;
+        let state = Arc::new(Mutex::new(app_state));
+        let (tx, _rx) = mpsc::unbounded_channel();
+
+        let initial = handle_request(state.clone(), "app.getOnboarding", json!({}), tx.clone())
+            .await
+            .unwrap();
+        assert_eq!(initial["showZRouterSetup"], true);
+
+        let provider_id = create_test_provider(state.clone(), tx.clone()).await;
+        let completed = handle_request(state.clone(), "app.getOnboarding", json!({}), tx.clone())
+            .await
+            .unwrap();
+        assert!(completed.get("showZRouterSetup").is_none());
+        assert_eq!(
+            state
+                .lock()
+                .await
+                .db
+                .get_setting(crate::db::ZROUTER_FIRST_RUN_SETTING)
+                .unwrap(),
+            Some(json!(crate::db::ZROUTER_FIRST_RUN_COMPLETED))
+        );
+
+        handle_request(
+            state.clone(),
+            "providers.delete",
+            json!({ "id": provider_id }),
+            tx.clone(),
+        )
+        .await
+        .unwrap();
+        let after_removal = handle_request(state, "app.getOnboarding", json!({}), tx)
+            .await
+            .unwrap();
+        assert!(after_removal.get("showZRouterSetup").is_none());
+    }
+
+    #[tokio::test]
+    async fn zrouter_setup_respects_onboarding_dismissal() {
+        let data_dir = tempfile::tempdir().unwrap();
+        let mut app_state = AppState::open(data_dir.path()).unwrap();
+        app_state.handshook = true;
+        let state = Arc::new(Mutex::new(app_state));
+        let (tx, _rx) = mpsc::unbounded_channel();
+
+        handle_request(
+            state.clone(),
+            "settings.set",
+            json!({ "onboardingDismissed": true }),
+            tx.clone(),
+        )
+        .await
+        .unwrap();
+        let onboarding = handle_request(state, "app.getOnboarding", json!({}), tx)
+            .await
+            .unwrap();
+        assert!(onboarding.get("showZRouterSetup").is_none());
+    }
+
+    #[tokio::test]
+    async fn zrouter_setup_is_not_retroactively_offered_to_existing_profiles() {
+        let data_dir = tempfile::tempdir().unwrap();
+        let mut app_state = AppState::open(data_dir.path()).unwrap();
+        app_state
+            .db
+            .kv_delete("app", crate::db::ZROUTER_FIRST_RUN_SETTING)
+            .unwrap();
+        app_state.handshook = true;
+        let state = Arc::new(Mutex::new(app_state));
+        let (tx, _rx) = mpsc::unbounded_channel();
+
+        let onboarding = handle_request(state, "app.getOnboarding", json!({}), tx)
+            .await
+            .unwrap();
+        assert!(onboarding.get("showZRouterSetup").is_none());
     }
 
     #[tokio::test]
