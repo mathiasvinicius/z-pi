@@ -52,12 +52,23 @@ test("unset preferences use package defaults and unsupported automatic preferenc
   assert.equal(resolveEffectiveUpdatePreference("automatic", true), "automatic");
 });
 
-test("manual preference disables in-app delivery and explicit automatic restores supported delivery", () => {
+test("portable and ZIP builds stay manual even when a stored preference is automatic", () => {
   assert.equal(resolveUpdateMode("win32", true, {}, "installed", "manual"), "manual");
+  assert.equal(resolveUpdateMode("win32", true, {}, "installed", "automatic"), "in-app");
   assert.equal(resolveUpdateMode("win32", true, {}, "zip"), "manual");
   assert.equal(resolveUpdateMode("win32", true, {}, "portable"), "manual");
-  assert.equal(resolveUpdateMode("win32", true, {}, "zip", "automatic"), "in-app");
-  assert.equal(resolveUpdateMode("win32", true, {}, "portable", "automatic"), "in-app");
+  assert.equal(resolveUpdateMode("win32", true, {}, "zip", "automatic"), "manual");
+  assert.equal(resolveUpdateMode("win32", true, {}, "portable", "automatic"), "manual");
+  assert.equal(
+    resolveUpdateMode(
+      "win32",
+      true,
+      { PORTABLE_EXECUTABLE_FILE: "Z-PI.exe" },
+      "installed",
+      "automatic",
+    ),
+    "manual",
+  );
   assert.equal(resolveUpdateMode("darwin", true, {}, undefined, "automatic"), "in-app");
   assert.equal(resolveUpdateMode("linux", true, {}, undefined, "automatic"), "manual");
   assert.equal(resolveUpdateMode("win32", false, {}, undefined, "automatic"), "disabled");

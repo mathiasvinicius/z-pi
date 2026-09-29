@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import {
+  globalInstructionPath,
   loadInstructionChain,
   loadProjectInstructions,
   type ProjectInstructions,
@@ -99,6 +100,23 @@ describe("loadProjectInstructions", () => {
 });
 
 describe("loadInstructionChain", () => {
+  it("reads the profile-local global file when the desktop data directory is set", async () => {
+    root = await mkdtemp(join(tmpdir(), "z-pi-instructions-"));
+    await mkdir(join(root, "agent"));
+    await writeFile(join(root, "agent", "AGENTS.md"), "Use this profile only.");
+    const previous = process.env.Z_PI_PROFILE_ROOT;
+    process.env.Z_PI_PROFILE_ROOT = root;
+    try {
+      expect(globalInstructionPath()).toBe(join(root, "agent", "AGENTS.md"));
+      await expect(loadInstructionChain(null)).resolves.toEqual({
+        entries: [{ source: "~/.pi/agent/AGENTS.md", content: "Use this profile only." }],
+      });
+    } finally {
+      if (previous === undefined) delete process.env.Z_PI_PROFILE_ROOT;
+      else process.env.Z_PI_PROFILE_ROOT = previous;
+    }
+  });
+
   it("loads global instructions before project instructions", async () => {
     root = await mkdtemp(join(tmpdir(), "pi-desktop-instructions-"));
     const globalPath = join(root, "global-AGENTS.md");

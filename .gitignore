@@ -61,3 +61,19 @@ electron.vite.config.*.mjs
 
 .playwright-cli
 worktrees
+
+# Local testing, caches, and test databases
+*.sqlite
+*.sqlite3
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+.venv/
+venv/
+*.jsonl
+measure-*.json
+measure-*.log
+*.token
+*.credentials
+scratch/

@@ -104,8 +104,18 @@ test("updater gates delivery mode by platform and delivery policy", () => {
   assert.match(updaterSource, /autoUpdater\.autoInstallOnAppQuit = mode === "in-app"/);
   assert.match(updaterSource, /this\.applyPreference\(preference, false\)/);
   assert.match(updaterSource, /manualReminderTracker/);
+  assert.match(
+    updaterSource,
+    /reclaimRelocatedUpdateCache\(\): Promise<void> \{[\s\S]*?this\.state\.mode !== "in-app"/,
+    "manual builds must not inspect the absent NSIS cache configuration",
+  );
   assert.match(updaterSource, /applyPreference\(this\.preference, false\)/);
   assert.match(updaterSource, /resolveStoredUpdatePreference/);
+  assert.match(
+    updaterSource,
+    /mode === "manual"[\s\S]*?autoUpdater\.setFeedURL\(GITHUB_UPDATE_FEED\)/,
+    "manual portable and ZIP checks must not require resources/app-update.yml",
+  );
   assert.match(updaterSource, /if \(!preferenceChanged\) return/);
   assert.match(
     updaterSource,
@@ -135,7 +145,7 @@ test("updater gates delivery mode by platform and delivery policy", () => {
   assert.match(updaterSource, /autoUpdater\.on\("error"/);
   assert.match(
     updaterSource,
-    /github\.com\/vastsa\/PI-Desktop\/releases/,
+    /github\.com\/mathiasvinicius\/z-pi\/releases/,
     "releases fallback URL",
   );
   assert.match(
@@ -165,6 +175,16 @@ test("updater gates delivery mode by platform and delivery policy", () => {
     /status === "checking"[\s\S]*status: "idle"/,
     "a timed-out auto-check must leave checking so the next interval can run",
   );
+});
+
+test("Z-PI update discovery is pinned to this fork", () => {
+  const pkg = JSON.parse(pkgSource);
+  assert.deepEqual(pkg.build.publish, [{
+    provider: "github",
+    owner: "mathiasvinicius",
+    repo: "z-pi",
+  }]);
+  assert.match(updaterSource, /https:\/\/github\.com\/mathiasvinicius\/z-pi\/releases\/latest/);
 });
 
 test("renderer exposes the updates API, banner and settings row", () => {
@@ -243,8 +263,8 @@ test("packaging publishes an electron-updater feed for GitHub Releases", () => {
   const pkg = JSON.parse(pkgSource);
   assert.ok(pkg.dependencies["electron-updater"], "electron-updater dependency");
   assert.equal(pkg.build.publish[0].provider, "github");
-  assert.equal(pkg.build.publish[0].owner, "vastsa");
-  assert.equal(pkg.build.publish[0].repo, "PI-Desktop");
+  assert.equal(pkg.build.publish[0].owner, "mathiasvinicius");
+  assert.equal(pkg.build.publish[0].repo, "z-pi");
   const macTargets = pkg.build.mac.target.map((entry) => entry.target);
   assert.ok(macTargets.includes("zip"), "mac zip target (Squirrel.Mac feed)");
   // electron-builder must never self-publish (implicit tag publishing would
@@ -279,13 +299,13 @@ test("packaging publishes an electron-updater feed for GitHub Releases", () => {
     "rpm build-id configuration",
   );
   // GitHub asset URLs mangle spaces; keep Windows artifact names space-free.
-  assert.equal(pkg.build.nsis.artifactName, "PI-Desktop-Setup-${version}.${ext}");
+  assert.equal(pkg.build.nsis.artifactName, "Z-PI-Setup-${version}.${ext}");
   const winTargets = pkg.build.win.target.map((entry) => entry.target);
   assert.deepEqual(winTargets, ["nsis", "zip", "portable"], "Windows release targets");
-  assert.equal(pkg.build.portable.artifactName, "PI-Desktop-Portable-${version}.${ext}", "portable artifact name");
+  assert.equal(pkg.build.portable.artifactName, "Z-PI-Portable-${version}.${ext}", "portable artifact name");
   assert.equal(
     pkg.build.win.artifactName,
-    "PI-Desktop-Portable-${version}.${ext}",
+    "Z-PI-Portable-${version}.${ext}",
   );
   assert.equal(pkg.build.extraMetadata.piDistribution, "installed");
   assert.match(pkg.scripts["dist:win"], /build-desktop-release\.mjs win/);

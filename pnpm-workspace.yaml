@@ -7,6 +7,8 @@ allowBuilds:
   electron: true
   electron-winstaller: true
   esbuild: true
+  # Windows native FFI used by the bundled voice path; installs its pinned prebuild.
+  koffi: true
   node-pty: true
   protobufjs: true
 # Drop this list once the pinned @earendil-works packages are older than

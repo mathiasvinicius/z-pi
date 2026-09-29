@@ -72,7 +72,12 @@ function createRelocatedUpdater(
   return platform === "win32" ? new RelocatedNsisUpdater(baseCachePath) : null;
 }
 
-export const RELEASES_URL = "https://github.com/vastsa/PI-Desktop/releases/latest";
+export const RELEASES_URL = "https://github.com/mathiasvinicius/z-pi/releases/latest";
+const GITHUB_UPDATE_FEED = {
+  provider: "github" as const,
+  owner: "mathiasvinicius",
+  repo: "z-pi",
+};
 
 const AUTO_CHECK_INITIAL_DELAY_MS = 15_000;
 const AUTO_CHECK_INTERVAL_MS = 6 * 60 * 60 * 1000;
@@ -195,6 +200,7 @@ export class AppUpdaterController {
       platform,
       isPackaged,
       this.env,
+      distribution,
     );
     this.readUpdateSettings = options.readUpdateSettings;
     this.persistLastNotifiedVersion = options.persistLastNotifiedVersion;
@@ -231,6 +237,13 @@ export class AppUpdaterController {
       );
     }
     this.autoUpdater = relocated ?? autoUpdater;
+    // ZIP and portable Windows builds do not reliably ship app-update.yml.
+    // Their manual-only flow only needs release metadata, never an installer,
+    // so configure the fixed public GitHub feed directly rather than letting
+    // electron-updater read a missing resource.
+    if (mode === "manual") {
+      this.autoUpdater.setFeedURL(GITHUB_UPDATE_FEED);
+    }
     this.cacheMaintenance = new UpdateCacheMaintenance({
       resourcesPath: process.resourcesPath,
       activeBasePath,
@@ -566,7 +579,9 @@ export class AppUpdaterController {
   }
   /** Adopt legacy NSIS cache files before the first update check. */
   reclaimRelocatedUpdateCache(): Promise<void> {
-    if (this.state.mode === "disabled") return Promise.resolve();
+    // Manual-only portable/ZIP builds never stage an NSIS installer and do not
+    // ship app-update.yml, which is needed only to locate that installer cache.
+    if (this.state.mode !== "in-app") return Promise.resolve();
     return this.cacheMaintenance.reclaimLegacyCache();
   }
 

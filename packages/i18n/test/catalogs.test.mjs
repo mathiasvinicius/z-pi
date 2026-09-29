@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "vitest";
 import {
   catalogs,
+  defaultLocale,
   en,
   flattenCatalog,
   listedLocales,
@@ -20,6 +21,10 @@ function placeholders(value) {
 }
 
 const english = flattenCatalog(en);
+
+test("new Z-PI profiles default to Brazilian Portuguese", () => {
+  assert.equal(defaultLocale, "pt-BR");
+});
 
 test("every shipped catalog matches English keys and interpolation variables", () => {
   for (const [id, catalog] of Object.entries(catalogs)) {
@@ -75,6 +80,12 @@ test("creation-phase delegation copy is catalog-backed", () => {
       "string",
       id,
     );
+  }
+});
+
+test("the ZRouter provider preset label is catalog-backed", () => {
+  for (const [id, catalog] of Object.entries(catalogs)) {
+    assert.equal(flattenCatalog(catalog)["settings.presetZrouter"], "ZRouter", id);
   }
 });
 

@@ -37,9 +37,58 @@ Local-first · Model-agnostic · Plugin-powered · macOS / Windows / Linux
 
 </div>
 
+> **Fork Z-PI** mantido por Vinicius Mathias (`mathiasvinicius/z-pi`), derivado do PI-Desktop upstream (`vastsa/PI-Desktop`).
+> Foco: Windows x64 self-contained, pt-BR nativo, perfil portable isolado, provider ZRouter nativo e memória relacional local.
+>
 > **Current release line: 0.15.x (Early Preview).**
 
 ---
+
+## O que o Z-PI adiciona (Fork Enhancements)
+
+O Z-PI preserva a arquitetura de três processos do PI-Desktop (Electron + Rust host-core + Node agent runtime) e estende as capacidades nativas:
+
+<table>
+<tr>
+
+<td width="50%" valign="top">
+
+### 🇧🇷 pt-BR Nativo
+- Idioma padrão em novos perfis (com seleção preservada para perfis existentes).
+- Catálogo completo mantido em `packages/i18n`.
+
+### 📦 Perfil Portátil e Isolamento
+- Diretório `.pi-desktop` resolvido ao lado do executável real (não do cwd).
+- Atributo oculto do Windows aplicado ao diretório de perfil.
+- Single-instance lock por pasta do executável: duas pastas rodam instâncias simultâneas e isoladas.
+- `agent/AGENTS.md` resolvido localmente no perfil, sem tocar em `%USERPROFILE%`.
+
+### ⚡ ZRouter Preset Nativo
+- Endpoint pré-configurado: `https://zrouter.itms.com.br/v1` (OpenAI-compatible).
+- Primeiro modelo sugerido recebe alias editável `ZROUTER`.
+- Onboarding de primeiro uso em banco novo sem sobregravação de providers existentes.
+
+</td>
+
+<td width="50%" valign="top">
+
+### 🧠 Memória Relacional Local (P2.1)
+- **100% nativa em Rust/SQLite** (schema v21 aditivo, FTS5 integrado).
+- Modelo inspirado no `neo4j-labs/agent-memory`: entidades POLE+O (`person`, `organization`, `location`, `object`, `event`, `technology`, `other`).
+- **Deduplicação com auto-merge** por nome normalizado dentro do escopo.
+- **Correção por supersede**: fatos novos atualizam via histórico auditável (`superseded_by`), sem sobrescrita destrutiva.
+- **Arestas de grafo explícitas**: relações tipadas com suporte a `same_as` para revisão.
+- **Ferramentas do agente**: `MemorySearch` (busca FTS cross-sessão) e `MemoryRecord` (gravação com proveniência por sessão/turno).
+- **Zero dependências externas**: sem Python, sem Docker, sem Neo4j local.
+
+### 🧩 Skills Semânticas por Perfil (P1.2)
+- Plugin bundled `local.pi-semantic-skills` com descoberta flat e pacotes `SKILL.md`.
+- Carregamento sob demanda por intenção: apenas a skill necessária entra no contexto.
+
+</td>
+
+</tr>
+</table>
 
 ## Why PI-Desktop?
 

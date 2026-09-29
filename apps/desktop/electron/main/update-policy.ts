@@ -6,9 +6,17 @@ export function supportsAutomaticUpdates(
   platform: NodeJS.Platform,
   isPackaged: boolean,
   env: NodeJS.ProcessEnv = process.env,
+  distribution?: WindowsDistribution,
 ): boolean {
   if (!isPackaged) return false;
-  if (platform === "win32" || platform === "darwin") return true;
+  if (platform === "win32") {
+    return !(
+      Boolean(env.PORTABLE_EXECUTABLE_FILE) ||
+      distribution === "zip" ||
+      distribution === "portable"
+    );
+  }
+  if (platform === "darwin") return true;
   return platform === "linux" && Boolean(env.APPIMAGE);
 }
 
@@ -18,13 +26,7 @@ export function resolveDefaultUpdatePreference(
   env: NodeJS.ProcessEnv = process.env,
   distribution?: WindowsDistribution,
 ): UpdatePreference {
-  if (!supportsAutomaticUpdates(platform, isPackaged, env)) return "manual";
-  if (
-    platform === "win32" &&
-    (Boolean(env.PORTABLE_EXECUTABLE_FILE) || distribution === "zip" || distribution === "portable")
-  ) {
-    return "manual";
-  }
+  if (!supportsAutomaticUpdates(platform, isPackaged, env, distribution)) return "manual";
   return "automatic";
 }
 
@@ -50,7 +52,7 @@ export function resolveUpdateMode(
   preference?: UpdatePreference,
 ): UpdateMode {
   if (!isPackaged) return "disabled";
-  if (!supportsAutomaticUpdates(platform, isPackaged, env)) return "manual";
+  if (!supportsAutomaticUpdates(platform, isPackaged, env, distribution)) return "manual";
   const selected =
     preference ??
     resolveDefaultUpdatePreference(platform, isPackaged, env, distribution);

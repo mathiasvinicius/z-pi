@@ -24,12 +24,22 @@ export type RecommendedModelSelection = {
   noRecommendation: boolean;
 };
 
+/** Add a service-specific display label without replacing any binding label. */
+export function labelFirstRecommendation(
+  picks: ModelBinding[],
+  alias?: string,
+): ModelBinding[] {
+  if (!alias || picks.length === 0 || picks[0].alias !== undefined) return picks;
+  return [{ ...picks[0], alias }, ...picks.slice(1)];
+}
+
 export function useRecommendedModelSelection({
   enabled,
   serviceKey,
   discovery,
   setModels: setModelsState,
   namedService,
+  defaultFirstModelAlias,
 }: {
   /** Only a new service with an empty selection is preselected. */
   enabled: boolean;
@@ -38,6 +48,8 @@ export function useRecommendedModelSelection({
   discovery: ProviderModelsState;
   setModels: (next: ModelBinding[] | ((current: ModelBinding[]) => ModelBinding[])) => void;
   namedService: boolean;
+  /** Optional display label applied only to a newly recommended first row. */
+  defaultFirstModelAlias?: string;
 }): RecommendedModelSelection {
   const touchedRef = useRef(false);
   const serviceKeyRef = useRef(serviceKey);
@@ -68,11 +80,14 @@ export function useRecommendedModelSelection({
     // A later failure (say a mistyped key after a good one) keeps the picks:
     // they came from a list the service did answer with.
     if (!enabled || touchedRef.current || !recommendable) return;
-    const picks = recommendModels(discovery.models);
+    const picks = labelFirstRecommendation(
+      recommendModels(discovery.models),
+      defaultFirstModelAlias,
+    );
     setModelsState(picks);
     setAutoPicked(picks.length > 0);
     setNoRecommendation(picks.length === 0);
-  }, [discovery.models, enabled, recommendable, setModelsState]);
+  }, [defaultFirstModelAlias, discovery.models, enabled, recommendable, setModelsState]);
 
   return { setModels, autoPicked, noRecommendation };
 }

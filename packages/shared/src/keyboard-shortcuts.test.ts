@@ -119,6 +119,8 @@ describe("keyboard shortcut mapping", () => {
     )!;
     expect(launcher.defaultBinding).toBe("Alt+Space");
     expect(resolveKeybinding(launcher, undefined, "darwin")).toBe("Alt+Space");
+    expect(resolveKeybinding(launcher, undefined, "win32")).toBeNull();
+    expect(resolveKeybinding(launcher, { openPluginLauncher: "Alt+Shift+P" }, "win32")).toBe("Alt+Shift+P");
     expect(keybindingDisplayParts("Alt+Space", "darwin")).toEqual(["⌥", "Space"]);
     expect(keybindingDisplayParts("Alt+Space", "win32")).toEqual(["Alt", "Space"]);
     expect(keybindingToElectronAccelerator("Alt+Space", "win32")).toBe(

@@ -103,10 +103,12 @@ export function ModelConfigPage() {
   const settings = useAppStore((s) => s.settings);
   const refreshProviders = useAppStore((s) => s.refreshProviders);
   const showToast = useAppStore((s) => s.showToast);
+  const consumeZRouterSetupIntent = useAppStore((s) => s.consumeZRouterSetupIntent);
 
   // null = closed, "" = add flow, provider id = edit flow.
   const [copyDraft, setCopyDraft] = useState<ProviderCopyDraft | null>(null);
   const [setupFor, setSetupFor] = useState<string | null>(null);
+  const [initialServiceId, setInitialServiceId] = useState<string | undefined>();
   const [pickingDefault, setPickingDefault] = useState(false);
   const [defaultModelQuery, setDefaultModelQuery] = useState("");
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -127,6 +129,12 @@ export function ModelConfigPage() {
     saveAccount,
   } = useVendorAccounts();
   const [editingAccountId, setEditingAccountId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!consumeZRouterSetupIntent()) return;
+    setInitialServiceId("zrouter");
+    setSetupFor("");
+  }, [consumeZRouterSetupIntent]);
 
   useEffect(() => {
     void (async () => {
@@ -274,12 +282,36 @@ export function ModelConfigPage() {
       }
       setSetupFor(null);
       setCopyDraft(null);
+      setInitialServiceId(undefined);
       await refreshProviders();
     } catch (error) {
       showToast(error instanceof Error ? error.message : String(error), {
         variant: "error",
       });
     }
+  };
+
+  const openAddProvider = () => {
+    setInitialServiceId(undefined);
+    setCopyDraft(null);
+    setSetupFor("");
+  };
+
+  const openCopyProvider = (provider: ProviderPublic) => {
+    setInitialServiceId(undefined);
+    setCopyDraft(
+      copyProviderConfiguration(
+        provider,
+        t("settings.copyProviderName", { name: provider.name }),
+      ),
+    );
+    setSetupFor("");
+  };
+
+  const openEditProvider = (provider: ProviderPublic) => {
+    setInitialServiceId(undefined);
+    setCopyDraft(null);
+    setSetupFor(provider.id);
   };
 
   const setImageGenerationDefault = async (binding: ImageGenerationBinding) => {
@@ -570,7 +602,7 @@ export function ModelConfigPage() {
             <Button
               variant="primary"
               className="model-provider-add"
-              onClick={() => setSetupFor("")}
+              onClick={openAddProvider}
             >
               <span className="model-config-btn-inner">
                 <IconPlus size={14} />
@@ -588,7 +620,7 @@ export function ModelConfigPage() {
               </div>
               <div className="model-provider-empty-title">{t("settings.noProviders")}</div>
               <div className="model-provider-empty-desc">{t("settings.noProvidersDesc")}</div>
-              <Button variant="primary" onClick={() => setSetupFor("")}>
+              <Button variant="primary" onClick={openAddProvider}>
                 <span className="model-config-btn-inner">
                   <IconPlus size={14} />
                   <span>{t("settings.addProvider")}</span>
@@ -615,7 +647,7 @@ export function ModelConfigPage() {
               onEdit={(provider) =>
                 serviceRowKind(provider) === "account"
                   ? setEditingAccountId(provider.id)
-                  : setSetupFor(provider.id)
+                  : openEditProvider(provider)
               }
               onMakeDefault={(provider) =>
                 void setDefaultModel(
@@ -624,15 +656,7 @@ export function ModelConfigPage() {
                 )
               }
               onTest={(provider) => void testProvider(provider)}
-              onCopy={(provider) => {
-                setCopyDraft(
-                  copyProviderConfiguration(
-                    provider,
-                    t("settings.copyProviderName", { name: provider.name }),
-                  ),
-                );
-                setSetupFor("");
-              }}
+              onCopy={openCopyProvider}
               onToggleEnabled={(provider) => void toggleEnabled(provider)}
               onRemove={(provider) =>
                 void (serviceRowKind(provider) === "account"
@@ -679,8 +703,9 @@ export function ModelConfigPage() {
       {setupFor !== null ? (
         <ProviderSetupDialog
           provider={editingProvider}
+          initialServiceId={initialServiceId}
           initialDraft={copyDraft}
-          onClose={() => { setSetupFor(null); setCopyDraft(null); }}
+          onClose={() => { setSetupFor(null); setCopyDraft(null); setInitialServiceId(undefined); }}
           imageModelIds={editingProvider
             ? imageGenerationCandidates
                 .filter((binding) => binding.providerId === editingProvider.id)

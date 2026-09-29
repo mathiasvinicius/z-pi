@@ -80,6 +80,47 @@ fn table_exists(conn: &Connection, name: &str) -> bool {
 }
 
 #[test]
+fn fresh_database_seeds_zrouter_first_run_marker() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("pi.sqlite");
+
+    let db = Database::open(&path).unwrap();
+    assert_eq!(
+        db.get_setting(ZROUTER_FIRST_RUN_SETTING).unwrap(),
+        Some(serde_json::json!(ZROUTER_FIRST_RUN_PENDING))
+    );
+}
+
+#[test]
+fn existing_database_does_not_reseed_zrouter_first_run_marker() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("pi.sqlite");
+    let db = Database::open(&path).unwrap();
+    db.kv_delete("app", ZROUTER_FIRST_RUN_SETTING).unwrap();
+    drop(db);
+
+    let reopened = Database::open(&path).unwrap();
+    assert_eq!(
+        reopened.get_setting(ZROUTER_FIRST_RUN_SETTING).unwrap(),
+        None
+    );
+}
+
+#[test]
+fn legacy_database_replacement_does_not_seed_zrouter_first_run_marker() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("pi.sqlite");
+    let legacy = Connection::open(&path).unwrap();
+    legacy
+        .execute_batch("CREATE TABLE legacy_data (id INTEGER); PRAGMA user_version = 6;")
+        .unwrap();
+    drop(legacy);
+
+    let db = Database::open(&path).unwrap();
+    assert_eq!(db.get_setting(ZROUTER_FIRST_RUN_SETTING).unwrap(), None);
+}
+
+#[test]
 fn v14_database_migrates_to_v15_with_the_turn_queue() {
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("pi.sqlite");
@@ -1467,4 +1508,81 @@ fn a_v16_file_gains_the_provider_owner_column() {
         )
         .unwrap();
     assert!(owner.is_none());
+}
+
+#[test]
+fn a_v20_file_gains_relational_memory_tables_without_touching_existing_rows() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("pi.sqlite");
+    {
+        let db = Database::open(&path).unwrap();
+        db.conn()
+            .execute(
+                "INSERT INTO kv (ns, key, value_json, updated_at)
+                 VALUES ('app', 'survivor', '\"keep\"', 1)",
+                [],
+            )
+            .unwrap();
+        // Back to a file that predates the memory tables.
+        db.conn()
+            .execute_batch(
+                "DROP TRIGGER memory_fts_au; DROP TRIGGER memory_fts_ad; DROP TRIGGER memory_fts_ai;
+                 DROP TABLE memory_fts; DROP TABLE memory_edges; DROP TABLE memory_facts;
+                 DROP TABLE memory_mentions; DROP TABLE memory_entities;
+                 PRAGMA user_version=20;",
+            )
+            .unwrap();
+    }
+    let db = Database::open(&path).unwrap();
+    assert_eq!(
+        db.conn()
+            .query_row("PRAGMA user_version", [], |row| row.get::<_, i64>(0))
+            .unwrap(),
+        SCHEMA_VERSION
+    );
+    assert!(migration_backup_path(&path, 20).exists());
+    // All memory tables exist and accept the v21 shapes.
+    for table in [
+        "memory_entities",
+        "memory_mentions",
+        "memory_facts",
+        "memory_edges",
+        "memory_fts",
+    ] {
+        let exists: i64 = db
+            .conn()
+            .query_row(
+                "SELECT COUNT(*) FROM sqlite_master WHERE type IN ('table') AND name = ?1",
+                params![table],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert!(exists == 1, "missing memory table {table}");
+    }
+    // The pre-migration row survives untouched.
+    let survivor: String = db
+        .conn()
+        .query_row(
+            "SELECT value_json FROM kv WHERE ns = 'app' AND key = 'survivor'",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap();
+    assert_eq!(survivor, "\"keep\"");
+    // The migrated store is fully usable end to end.
+    let entity = db
+        .memory_entity_upsert(
+            "p1",
+            crate::memory::MemoryScope::Profile,
+            None,
+            "person",
+            None,
+            "Alice Smith",
+            None,
+            0.9,
+            None,
+            None,
+        )
+        .unwrap();
+    assert_eq!(entity.name, "Alice Smith");
 }

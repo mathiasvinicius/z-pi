@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { mkdtemp, rm } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { register } from "node:module";
 import { tmpdir } from "node:os";
@@ -11,6 +12,8 @@ const here = dirname(fileURLToPath(import.meta.url));
 register(pathToFileURL(join(here, "helpers/ts-import-hooks.mjs")));
 const {
   applyDevelopmentUserData,
+  applyPortableUserData,
+  hidePortableProfile,
   DEVELOPMENT_DATA_DIR_NAME,
   DEVELOPMENT_INSTALLATION_NAME,
   INSTALLATION_DATA_DIR_NAME,
@@ -35,7 +38,7 @@ test("a development build owns a different data directory than the shipped app",
   // the split can only have moved the development side.
   assert.equal(INSTALLATION_DATA_DIR_NAME, ".pi-desktop");
   assert.equal(DEVELOPMENT_DATA_DIR_NAME, ".pi-desktop-dev");
-  assert.equal(DEVELOPMENT_INSTALLATION_NAME, "PI-Desktop Dev");
+  assert.equal(DEVELOPMENT_INSTALLATION_NAME, "Z-PI Dev");
 });
 
 test("PI_DESKTOP_DATA_DIR still overrides either profile", () => {
@@ -55,6 +58,52 @@ test("PI_DESKTOP_DATA_DIR still overrides either profile", () => {
     resolveDataDir({ override: "   ", development: true, home }),
     join(home, DEVELOPMENT_DATA_DIR_NAME),
   );
+});
+
+test("a portable executable owns a data directory beside its real file", () => {
+  const root = join(tmpdir(), "z-pi portable root");
+  const executable = join(root, "Z-PI.exe");
+  const home = join(tmpdir(), "different-home");
+  assert.equal(resolveDataDir({ override: undefined, development: false, home, portableExecutable: executable }), join(root, ".pi-desktop"));
+  assert.equal(resolveDataDir({ override: undefined, development: true, home, portableExecutable: executable }), join(home, DEVELOPMENT_DATA_DIR_NAME));
+  assert.equal(resolveDataDir({ override: join(home, "chosen"), development: false, home, portableExecutable: executable }), join(home, "chosen"));
+  assert.equal(resolveDataDir({ override: undefined, development: false, home, portableExecutable: "relative.exe" }), join(home, INSTALLATION_DATA_DIR_NAME));
+});
+
+test("a portable profile owns Chromium state and the instance lock", async () => {
+  const root = await mkdtemp(join(tmpdir(), "z-pi-profile-"));
+  try {
+    const executable = join(root, "Z-PI.exe");
+    const calls = [];
+    const app = {
+      commandLine: { hasSwitch: () => false },
+      getPath: () => root,
+      setPath: (name, path) => calls.push([name, path]),
+    };
+    applyPortableUserData(app, false, executable, undefined);
+    assert.deepEqual(calls, [["userData", join(root, ".pi-desktop", "electron")]]);
+    calls.length = 0;
+    applyPortableUserData(app, true, executable, undefined);
+    applyPortableUserData(app, false, executable, join(root, "override"));
+    applyPortableUserData({ ...app, commandLine: { hasSwitch: () => true } }, false, executable, undefined);
+    assert.deepEqual(calls, []);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("Windows marks only the portable profile root as hidden", () => {
+  const calls = [];
+  const run = (...args) => calls.push(args);
+  const profile = join(tmpdir(), "z-pi", ".pi-desktop");
+  hidePortableProfile(profile, "linux", run);
+  assert.deepEqual(calls, []);
+  hidePortableProfile(profile, "win32", run);
+  assert.deepEqual(calls, [["attrib.exe", ["+h", profile], {
+    windowsHide: true,
+    timeout: 5_000,
+    stdio: "ignore",
+  }]]);
 });
 
 test("an explicit data directory reaches the child processes as an absolute path", () => {
@@ -144,6 +193,16 @@ test("main resolves one data directory and publishes it to everything below", ()
   assert.ok(
     indexSource.indexOf("process.env.PI_DESKTOP_DATA_DIR = dataDir;") > lockVerdict,
   );
+});
+
+test("portable profile paths are fixed before locking and child startup", () => {
+  const lock = indexSource.indexOf("app.requestSingleInstanceLock()");
+  const portableUserData = indexSource.indexOf("applyPortableUserData(");
+  const profileExport = indexSource.indexOf("process.env.Z_PI_PROFILE_ROOT = dataDir;");
+  const dataExport = indexSource.indexOf("process.env.PI_DESKTOP_DATA_DIR = dataDir;");
+  assert.ok(portableUserData > 0 && portableUserData < lock);
+  assert.ok(dataExport > lock && profileExport > dataExport);
+  assert.match(indexSource, /process\.env\.PI_DESKTOP_AGENTS_DIR = dataDir/);
 });
 
 test("downstream data directories follow the profile instead of the shipped default", async () => {

@@ -181,6 +181,10 @@ export type AppState = {
   settingsTab: SettingsTabId;
   /** Pending row anchor (i18n key) to flash after landing on a settings tab. */
   settingsAnchor: string | null;
+  /** One-shot renderer intent to open the first-run ZRouter setup form. */
+  zRouterSetupIntent: boolean;
+  /** Prevents the pending host marker from reopening setup in this renderer. */
+  zRouterSetupPromptHandled: boolean;
   /** Bumped by every setSettingsTab so a same-tab navigation is observable. */
   settingsTabNonce: number;
   navStack: Array<{ page: AppState["page"]; sessionId?: string }>;
@@ -337,6 +341,7 @@ export type AppState = {
   setPage: (page: AppState["page"], opts?: { record?: boolean }) => void;
   setSettingsTab: (tab: AppState["settingsTab"]) => void;
   setSettingsAnchor: (key: string | null) => void;
+  consumeZRouterSetupIntent: () => boolean;
   navBack: () => void;
   navForward: () => void;
   canNavBack: () => boolean;

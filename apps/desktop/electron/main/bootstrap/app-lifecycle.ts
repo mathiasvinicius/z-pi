@@ -16,7 +16,7 @@ import {
   type KeybindingOverrides,
   type NativeMenuAction,
 } from "@pi-desktop/shared";
-import { catalogs, resolveLocale } from "@pi-desktop/i18n";
+import { catalogs, defaultLocale, resolveLocale } from "@pi-desktop/i18n";
 import { installApplicationMenu } from "../application-menu";
 import { createTraySessions } from "../tray-sessions";
 import { createTaskbarUnreadBadge } from "../taskbar-unread-badge";
@@ -576,7 +576,7 @@ export function createApplicationLifecycle({
       settings.language &&
       settings.language !== "auto"
         ? settings.language
-        : app.getLocale();
+        : settings?.language === "auto" ? app.getLocale() : defaultLocale;
     if (locale !== appearanceState.updaterLocale) {
       appearanceState.updaterLocale = locale;
       refreshReleaseNotes();

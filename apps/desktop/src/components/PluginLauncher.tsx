@@ -192,9 +192,11 @@ export function PluginLauncher() {
               }
             }}
           />
-          <span className="plugin-launcher-shortcut" aria-hidden>
-            {window.piDesktop?.platform === "darwin" ? "⌥ Space" : "Alt + Space"}
-          </span>
+          {window.piDesktop?.platform !== "win32" && (
+            <span className="plugin-launcher-shortcut" aria-hidden>
+              {window.piDesktop?.platform === "darwin" ? "⌥ Space" : "Alt + Space"}
+            </span>
+          )}
         </div>
 
         <div

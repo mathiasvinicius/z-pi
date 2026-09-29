@@ -30,6 +30,10 @@ import {
   type UserSubagentDocument,
 } from "@pi-desktop/agent-runtime";
 import { builtinSkills } from "../builtin-skills";
+import {
+  filterSemanticRouterDuplicateUserSkills,
+  semanticRouterActiveForProject,
+} from "../semantic-skill-visibility";
 import { OAUTH_AUTH_KIND, type VendorOAuth } from "../oauth";
 import {
   catalogModelConfigFor,
@@ -130,7 +134,15 @@ export function createSessionLaunchRuntime({
       const result = await runtimeState.host!.call<{ skills: UserSkillRecord[] }>("skills.active", {
         projectPath: projectPath ?? null,
       });
-      return result.skills ?? [];
+      const pluginSkills = plugins.getSkills();
+      return await filterSemanticRouterDuplicateUserSkills(result.skills ?? [], {
+        dataDir,
+        semanticRouterActive: semanticRouterActiveForProject(
+          pluginSkills,
+          projectPath,
+          pluginActiveInProject,
+        ),
+      });
     } catch (error) {
       if (!isHostUnavailable(error)) {
         logger.app("plugin", "warn", "skills list failed", { data: String(error) });

@@ -7,7 +7,7 @@ pub(crate) use serde_json::Value;
 pub(crate) use std::path::{Path, PathBuf};
 
 /// Current SQLite schema version.
-pub const SCHEMA_VERSION: i64 = 20;
+pub const SCHEMA_VERSION: i64 = 21;
 
 /// Absolute approval deadline for a newly submitted Plan or Goal proposal.
 pub const PLAN_APPROVAL_TIMEOUT_MS: i64 = 30 * 60 * 1000;
@@ -15,6 +15,7 @@ pub const PLAN_APPROVAL_TIMEOUT_MS: i64 = 30 * 60 * 1000;
 /// Durable notification rows kept globally.
 pub const NOTIFICATION_KEEP: i64 = 200;
 
+mod memory_schema;
 mod migrations;
 mod model;
 mod plugin_providers_migration;
@@ -22,11 +23,12 @@ mod project_groups;
 mod repositories;
 mod schema;
 mod session_collaboration_migration;
+pub(crate) use memory_schema::MEMORY_SCHEMA;
 pub(crate) use migrations::{
     archive_legacy_db, create_migration_backup, migrate_and_validate_top_level_mode,
     migrate_app_settings, migrate_v10_to_v15, migrate_v11_to_v15, migrate_v12_to_v15,
     migrate_v13_to_v15, migrate_v14_to_v15, migrate_v17_to_v18, migrate_v18_to_v19,
-    migrate_v19_to_v20, migrate_v7_to_v8, migrate_v8_to_v15, migrate_v9_to_v15,
+    migrate_v19_to_v20, migrate_v20_to_v21, migrate_v7_to_v8, migrate_v8_to_v15, migrate_v9_to_v15,
     migration_backup_path, validate_session_modes,
 };
 pub(crate) use model::PlanWorkRow;
@@ -35,7 +37,8 @@ pub use project_groups::{ProjectGroupContextRecord, ProjectGroupRecord, ProjectG
 pub(crate) use repositories::{
     canonical_project_path, normalize_project_path, project_display_name,
     strip_obsolete_plan_approval_permission_mode, upsert_project_row, MAX_PROJECT_MEMORY_BYTES,
-    OBSOLETE_PLAN_APPROVAL_PERMISSION_MODE,
+    OBSOLETE_PLAN_APPROVAL_PERMISSION_MODE, ZROUTER_FIRST_RUN_COMPLETED, ZROUTER_FIRST_RUN_PENDING,
+    ZROUTER_FIRST_RUN_SETTING,
 };
 pub(crate) use schema::{PLAN_APPROVALS_SCHEMA, SCHEMA_LATEST};
 

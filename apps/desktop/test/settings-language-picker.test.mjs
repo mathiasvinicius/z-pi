@@ -8,6 +8,7 @@ const rowSource = await readFile(
   new URL("../src/components/settings/LanguageRow.tsx", import.meta.url),
   "utf8",
 );
+const languageSource = await readFile(new URL("../src/lib/app-language.ts", import.meta.url), "utf8");
 const settingsPageSource = await readSettingsSource();
 const styles = await loadStyles();
 
@@ -44,6 +45,12 @@ test("the Auto row shows the OS-detected native name", () => {
   assert.match(rowSource, /settings\.languageAutoDesc/);
   assert.match(rowSource, /detectedInfo\.nativeName/);
   assert.doesNotMatch(rowSource, /autoLabel} · \$\{detectedInfo/);
+});
+
+test("fresh profiles use the product default while explicit Auto still follows the OS", () => {
+  assert.match(rowSource, /settings\.language \?\? defaultLocale/);
+  assert.match(languageSource, /if \(!language\) return defaultLocale/);
+  assert.match(languageSource, /return resolveLocale\(resolveOsLocale\(\)\)/);
 });
 
 test("the language trigger hugs the current label without a native field chrome", () => {

@@ -15,6 +15,9 @@ register(pathToFileURL(join(here, "helpers/ts-import-hooks.mjs")));
 const { PREMIUM_OUTPUT_COST_PER_MILLION, canRecommendFrom, recommendModels } = await import(
   "../src/components/settings/recommended-models.ts"
 );
+const { labelFirstRecommendation } = await import(
+  "../src/components/settings/useRecommendedModelSelection.ts"
+);
 
 const model = (modelId, over = {}) => ({
   modelId,
@@ -189,4 +192,20 @@ test("picks are the same bindings a manual pick creates", () => {
   assert.equal(binding.contextWindowSource, "catalog");
   assert.equal(binding.defaultThinkingLevel, "medium");
   assert.equal(binding.supportsImages, null);
+});
+
+test("a service default labels only the first recommendation when it has no alias", () => {
+  const picks = [{ id: "chat-model" }, { id: "second-model", alias: "Existing" }];
+  assert.deepEqual(labelFirstRecommendation(picks, "ZROUTER"), [
+    { id: "chat-model", alias: "ZROUTER" },
+    { id: "second-model", alias: "Existing" },
+  ]);
+  assert.deepEqual(labelFirstRecommendation([{ id: "chat-model", alias: "" }], "ZROUTER"), [
+    { id: "chat-model", alias: "" },
+  ]);
+  assert.deepEqual(labelFirstRecommendation([{ id: "chat-model", alias: "Custom" }], "ZROUTER"), [
+    { id: "chat-model", alias: "Custom" },
+  ]);
+  assert.deepEqual(labelFirstRecommendation([], "ZROUTER"), []);
+  assert.deepEqual(labelFirstRecommendation(picks), picks);
 });

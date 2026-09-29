@@ -105,5 +105,8 @@
 - [decisions-log.md](/zh-CN/spec/08-meta/decisions-log)
 - [open-questions.md](/zh-CN/spec/08-meta/open-questions)
 
+## 9. Z-PI 分支
+- [01-windows-foundation.md](/zh-CN/spec/09-z-pi/01-windows-foundation)
+
 ## ADR
 - [../adr/README.md](/adr/README)

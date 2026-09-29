@@ -27,7 +27,7 @@ import { de } from "./locales/de/index.js";
 import { ko } from "./locales/ko/index.js";
 import { ptBR } from "./locales/pt-BR/index.js";
 
-export const defaultLocale = "en";
+export const defaultLocale = "pt-BR";
 
 /**
  * Shipped UI locales. Native names are endonyms and must stay untranslated

@@ -102,5 +102,8 @@
 - [decisions-log.md](08-meta/decisions-log.md)
 - [open-questions.md](08-meta/open-questions.md)
 
+## 9. Z-PI fork
+- [01-windows-foundation.md](09-z-pi/01-windows-foundation.md)
+
 ## ADR
 - [../adr/README.md](../adr/README.md)

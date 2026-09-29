@@ -37,6 +37,7 @@ export function createInteractionSlice({
   | "setPage"
   | "setSettingsTab"
   | "setSettingsAnchor"
+  | "consumeZRouterSetupIntent"
   | "canNavBack"
   | "canNavForward"
   | "navBack"
@@ -89,6 +90,13 @@ export function createInteractionSlice({
       }));
     },
     setSettingsAnchor: (settingsAnchor) => set({ settingsAnchor }),
+    consumeZRouterSetupIntent: () => {
+      const shouldOpen = get().zRouterSetupIntent && get().providers.length === 0;
+      if (get().zRouterSetupIntent) {
+        set({ zRouterSetupIntent: false, zRouterSetupPromptHandled: true });
+      }
+      return shouldOpen;
+    },
     canNavBack: () => get().navIndex > 0,
     canNavForward: () => get().navIndex < get().navStack.length - 1,
 

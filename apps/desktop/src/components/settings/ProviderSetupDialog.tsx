@@ -60,6 +60,8 @@ function initialBaseUrl(provider?: ProviderPublic | null): string {
 
 export type ProviderSetupDialogProps = {
   provider?: ProviderPublic | null;
+  /** Opens directly on a named service's add form, without creating a row. */
+  initialServiceId?: string;
   initialDraft?: ProviderCopyDraft | null;
   onClose: () => void;
   imageModelIds?: string[];
@@ -72,6 +74,7 @@ export type ProviderSetupDialogProps = {
 
 export function ProviderSetupDialog({
   provider,
+  initialServiceId,
   initialDraft,
   onClose,
   onSaved,
@@ -83,16 +86,19 @@ export function ProviderSetupDialog({
   const [imageModelDraft, setImageModelDraft] = useState<string[] | undefined>();
   const editing = !!provider;
   const apiKeyRef = useRef<HTMLInputElement>(null);
+  const initialServicePreset = !provider && !initialDraft
+    ? NAMED_ENDPOINT_PRESETS.find((preset) => preset.id === initialServiceId)
+    : undefined;
   const [service, setService] = useState(() => initialDraft
     ? initialDraft.apiStyle === OPENCODE_GO_API_STYLE
       ? NAMED_ENDPOINT_PRESETS.find((preset) => preset.apiStyle === OPENCODE_GO_API_STYLE)?.id ?? CUSTOM_SERVICE
       : CUSTOM_SERVICE
-    : serviceIdFor(provider));
-  const [name, setName] = useState(() => initialDraft?.name ?? initialName(provider));
-  const [baseUrl, setBaseUrl] = useState(() => initialDraft?.baseUrl ?? initialBaseUrl(provider));
+    : initialServicePreset?.id ?? serviceIdFor(provider));
+  const [name, setName] = useState(() => initialDraft?.name ?? initialServicePreset?.name ?? initialName(provider));
+  const [baseUrl, setBaseUrl] = useState(() => initialDraft?.baseUrl ?? initialServicePreset?.baseUrl ?? initialBaseUrl(provider));
   const [apiKey, setApiKey] = useState("");
   const [apiStyle, setApiStyle] = useState<CatalogApiStyle>(() =>
-    initialDraft?.apiStyle ?? normalizeApiStyle(provider?.apiStyle),
+    initialDraft?.apiStyle ?? initialServicePreset?.apiStyle ?? normalizeApiStyle(provider?.apiStyle),
   );
   const [headerPairs, setHeaderPairs] = useState(() => recordToPairs(provider?.headers));
   const [advancedOpen, setAdvancedOpen] = useState(false);
@@ -163,6 +169,7 @@ export function ProviderSetupDialog({
     discovery,
     setModels,
     namedService: named,
+    defaultFirstModelAlias: namedPreset?.id === "zrouter" ? "ZROUTER" : undefined,
   });
   // Every edit made through the picker or the summary ends preselection.
   const selection = useModelSelection(discovery, models, recommended.setModels);
