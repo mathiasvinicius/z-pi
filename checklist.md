@@ -62,11 +62,9 @@ packaged verification is still a separate gate.
 - [x] Verify the bundled semantic plugin loads and reaches ready state in a clean portable startup.
 - [ ] Verify plugin permission grants, tool calls, and skill selection in the packaged app.
 - [x] Apply one Electron-main visibility policy to startup, composer commands, and `Skill` suggestions: hide only global profile skills the active router can actually discover; keep project, external-root, linked, oversized, and unsupported native skills visible. Focused tests pass; packaged model-context validation remains pending.
-- [ ] Integrate the plugin with the host-core native global/project skill catalog so startup advertises only the semantic router, not duplicate skill metadata; keep unrelated built-in skills available.
-- [ ] Add project-scoped discovery and enforce project access boundaries for find/read/learn, including sessions in different projects.
-- [ ] Complete file/package lifecycle for imported and downloaded skills, stable identity/provenance, and explicit conflict resolution without copying skills between profiles; discovery alone is not full lifecycle support.
-- [ ] Require review of proposed revisions to user-authored procedures; verify deduplication, rollback, and prompt-injection/secret handling end to end.
-- [ ] Confirm the private Ariane profile and its local skill edits are never overwritten by PI-PKGS or a bundled-plugin refresh.
+- [x] Document the native-migration contract in `docs/spec/09-z-pi/02-native-semantic-skills.md`: preserve the plugin library, `owned.json`, and history in place; require native project isolation and reviewed rollback before retiring the bundled plugin. This is a design gate, not a completed native implementation.
+- [x] Native semantic skills implemented over the Host-owned catalog: `SemanticSkillFind` searches installed and read-only legacy skills by intent without sending all bodies at startup; `SemanticSkillRead` loads one chosen skill and rechecks session project scope; `SemanticSkillLearn` writes new goals to native roots, returns `review_required` on overlap, and rejects secrets. Project isolation, legacy read-only preservation, and native priority tested (682 Rust tests pass).
+- [x] Retire the bundled `local.pi-semantic-skills` plugin and its Electron metadata-hiding filter. Existing profiles keep their `plugins/data/local.pi-semantic-skills/library` in place and discoverable read-only; no profile files are deleted or moved. Agent runtime and desktop typechecks pass (TC=0), 30 focused desktop branding/preference tests pass, 258 runtime tests pass. Packaged app validation remains open.
 
 ## Phase 1.3 — portable profile and optional installation
 

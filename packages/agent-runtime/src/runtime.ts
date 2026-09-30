@@ -5,6 +5,7 @@ import { readLocalRequestErrorDetails } from "./local-request-errors.js";
 import { imageGenerationDescription, imageGenerationParameters } from "./image-generation/tool.js";
 import { memoryToolDescriptions, memoryToolParameters } from "./memory-tools.js";
 import { scheduledToolParameters, scheduledToolDescriptions } from "./scheduled-tools.js";
+import { semanticSkillDescriptions, semanticSkillParameters } from "./semantic-skill-tools.js";
 import { withPiFileOpToolNames } from "./pi-file-ops.js";
 import { randomUUID } from "node:crypto";
 import {
@@ -2888,6 +2889,7 @@ Do not invent objections or turn speculative risks into blockers. Stop when the 
       " An explicit path outside the workspace and session scratch roots requires permission unless the effective mode is Auto.";
     const describe = (toolName: string): string => {
       if (memoryToolDescriptions[toolName]) return memoryToolDescriptions[toolName];
+      if (semanticSkillDescriptions[toolName]) return semanticSkillDescriptions[toolName];
       if (scheduledToolDescriptions[toolName]) return scheduledToolDescriptions[toolName];
       switch (toolName) {
         case "BrowserPreview":
@@ -3033,6 +3035,7 @@ Do not invent objections or turn speculative risks into blockers. Stop when the 
       PluginCheck: { directory: Type.String() },
       PluginPack: { directory: Type.String() },
       ...memoryToolParameters,
+      ...semanticSkillParameters,
     };
     const exec = (toolName: string): AgentTool => {
       const run: AgentTool["execute"] = async (
@@ -3415,6 +3418,7 @@ Do not invent objections or turn speculative risks into blockers. Stop when the 
         "GenerateImages",
         ...Object.keys(scheduledToolParameters),
         ...Object.keys(memoryToolParameters),
+        ...Object.keys(semanticSkillParameters),
       );
     }
     const builtins = tools.map(exec);

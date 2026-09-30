@@ -1,7 +1,9 @@
 mod config_sync_rpc;
+mod legacy_semantic_skills;
 mod memory_tools;
 mod scheduled_rpc;
 mod scheduled_tools;
+mod semantic_skill_tools;
 use std::io::{self, BufRead, BufReader as StdBufReader, Read, Write};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -3418,6 +3420,7 @@ async fn handle_request(
             if let Some(items) = definitions.as_array_mut() {
                 items.extend(scheduled_tools::definitions());
                 items.extend(memory_tools::definitions());
+                items.extend(semantic_skill_tools::definitions());
             }
             Ok(json!({ "tools": definitions }))
         }
@@ -3918,6 +3921,9 @@ async fn handle_request(
                 } else if memory_tools::recognizes(&p.tool_name) {
                     let st = state.lock().await;
                     memory_tools::execute(&st, &p)
+                } else if semantic_skill_tools::recognizes(&p.tool_name) {
+                    let mut st = state.lock().await;
+                    semantic_skill_tools::execute(&mut st, &p)
                 } else {
                     tools::execute_tool_with_path_access(
                         ws_path.as_deref(),

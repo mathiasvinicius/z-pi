@@ -15,11 +15,12 @@ integration tests and checklist status.
 Implementation tracker (2026-09-29): the first code slices add profile-root
 resolution for Windows portable builds, profile-local global instructions,
 pt-BR defaults for new profiles, Z-PI Windows naming, and the fork's update
-feed. The portable profile now receives the Windows hidden attribute. A
-semantic-skills plugin is bundled and reads this profile's library without
-moving local skills; it now discovers flat files and one-level `SKILL.md`
-packages. The source now suppresses only router-discoverable duplicate global
-skill metadata; project-scoped semantic discovery remains open. Alt+Space is
+feed. The portable profile now receives the Windows hidden attribute. Semantic
+skills are native in host-core (P1.2): `SemanticSkillFind`, `SemanticSkillRead`,
+and `SemanticSkillLearn` search installed and legacy skills by intent, load
+instructions on demand, check session project scope, and reject secret leaks.
+The bundled plugin is retired, while existing profile libraries remain readable
+in place. Alt+Space is unbound by default on Windows.
 unbound by default on Windows. The ZRouter endpoint is a native preset, and a
 genuinely fresh database now opens its preselected setup form without creating
 a provider or copying a credential. Its first automatically suggested model

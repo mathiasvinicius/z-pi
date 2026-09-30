@@ -30,10 +30,6 @@ import {
   type UserSubagentDocument,
 } from "@pi-desktop/agent-runtime";
 import { builtinSkills } from "../builtin-skills";
-import {
-  filterSemanticRouterDuplicateUserSkills,
-  semanticRouterActiveForProject,
-} from "../semantic-skill-visibility";
 import { OAUTH_AUTH_KIND, type VendorOAuth } from "../oauth";
 import {
   catalogModelConfigFor,
@@ -134,15 +130,7 @@ export function createSessionLaunchRuntime({
       const result = await runtimeState.host!.call<{ skills: UserSkillRecord[] }>("skills.active", {
         projectPath: projectPath ?? null,
       });
-      const pluginSkills = plugins.getSkills();
-      return await filterSemanticRouterDuplicateUserSkills(result.skills ?? [], {
-        dataDir,
-        semanticRouterActive: semanticRouterActiveForProject(
-          pluginSkills,
-          projectPath,
-          pluginActiveInProject,
-        ),
-      });
+      return result.skills ?? [];
     } catch (error) {
       if (!isHostUnavailable(error)) {
         logger.app("plugin", "warn", "skills list failed", { data: String(error) });
@@ -448,14 +436,11 @@ export function createSessionLaunchRuntime({
     // skill limited to certain projects must be invisible to a session on any
     // other one — not merely refused when called, since a tool the model can see
     // is a tool it will try.
-    const userSkills = await activeUserSkills(projectPath);
     await refreshUserMcp(projectPath);
     const userMcpTools = await userMcp.toolsForProject(projectPath ?? null);
-    // Skill catalog (D174): only id/name/description cross to the sidecar; the
-    // document body is fetched on demand through the local `Skill` tool. Host
-    // skills come first so a plugin's entry reads as a refinement of them, and
-    // the user's own skills come last so they win a name clash in the model's
-    // reading order.
+    // Built-in and third-party plugin skills keep their existing prompt entries.
+    // Installed user skills are found through SemanticSkillFind on demand;
+    // their metadata and bodies are not injected at session startup.
     const pluginSkills = [
       ...builtinSkills({
         workspacePath: projectPath,
@@ -469,11 +454,6 @@ export function createSessionLaunchRuntime({
           name: skill.name,
           description: skill.description,
         })),
-      ...userSkills.map((skill) => ({
-        id: skill.id,
-        name: skill.name,
-        description: skill.description,
-      })),
     ];
     // Subagents (ADR 0062): definitions are re-read per launch so editing
     // `~/.agents/subagents` or the registry takes effect on the next prompt, and every
